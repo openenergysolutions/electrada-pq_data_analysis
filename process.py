@@ -99,6 +99,13 @@ def plot_time_series(data, columns, title, ylabel, colors=None):
 #     ylabel='Power'
 # )
 
+# plot_time_series(
+#     data=all_data,
+#     columns=['Unbl_U','Unbl_I'],
+#     title='Time Series Data for Unbl_U, Unbl_I',
+#     ylabel='Power'
+# )
+
 def plot2_time_series(data, columns, title, ylabel, columns2, title2, ylabel2, colors=None):
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
 
