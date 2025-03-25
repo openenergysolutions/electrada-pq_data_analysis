@@ -3,18 +3,18 @@ import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Check if directory argument is provided
+# Check command line arguments
 if len(sys.argv) != 2:
-    print("Usage: python script_name.py <directory_path>")
+    print("Usage: python cms_data.py <directory_path>")
     sys.exit(1)
 
 data_dir = sys.argv[1]
 
-
-# Read csv files and concatenate into one dataframe
+# Load power quality data from files
+print(f"Loading power quality data from {data_dir}...")
 data_frames = []
-
 time_column = 'Time'
+
 for filename in os.listdir(data_dir):
     if filename.endswith(".csv"):
         file_path = os.path.join(data_dir, filename)
@@ -22,131 +22,60 @@ for filename in os.listdir(data_dir):
         data_frames.append(df)
 
 all_data = pd.concat(data_frames)
-
 all_data = all_data.sort_values(by=time_column)
 all_data[time_column] = pd.to_datetime(all_data[time_column])
 all_data = all_data.set_index(time_column)
 
+# Load CMS data
+print("Loading CMS data...")
 time_column2 = 'timestamp'
-cmd_data_dir = "./data/mth_meter_data_2024-12-09.csv" # "./data/mth_meter_data_2024-11-27.csv"
-cms_df = pd.read_csv(cmd_data_dir, parse_dates=[time_column2], dayfirst=False)
+cms_data_dir = "./data/mth_meter_data_2024-12-09.csv"  # alternative: "./data/mth_meter_data_2024-11-27.csv"
+cms_df = pd.read_csv(cms_data_dir, parse_dates=[time_column2], dayfirst=False)
 cms_df = cms_df.sort_values(by=time_column2)
 cms_df[time_column2] = pd.to_datetime(cms_df[time_column2])
-cms_df[time_column2] = cms_df[time_column2].dt.tz_localize(None)
+cms_df[time_column2] = cms_df[time_column2].dt.tz_localize(None)  # Remove timezone info if present
 
-
-# cms_df = cms_df.set_index(time_column2)
-
+# Create common time index for both datasets
+print("Aligning datasets...")
 revised_full_index = pd.date_range(
     start=max(cms_df[time_column2].min(), all_data.index.min()), 
     end=min(cms_df[time_column2].max(), all_data.index.max()), 
     freq='min')
 
+# Reindex both datasets to common time index
 cms_df = cms_df.set_index(time_column2).reindex(revised_full_index)
-
 all_data = all_data.reindex(revised_full_index)
 
+# Calculate differences between measurements
+print("Calculating differences...")
 all_data['diff'] = all_data['Psum_kW'] - cms_df['site_power']
-all_data['diff_site_power_percentage'] = (all_data['diff'] / cms_df['site_power'])*100
+all_data['diff_site_power_percentage'] = (all_data['diff'] / cms_df['site_power']) * 100
 all_data['diff_site_power_percentage'] = all_data['diff_site_power_percentage'].clip(lower=0, upper=100)
 cms_df['diff_site_power_percentage'] = all_data['diff_site_power_percentage']
-# print(f'Available datas are {all_data.columns.values}')
-# print(f'Available chargers are {cms_df.columns.values}')
 
-
-# calculate daily and weekly total P and Q values
-def calculate_consumption(data, columns):
-    daily_consumption = pd.DataFrame()
-    weekly_consumption = pd.DataFrame()
-
-    for column in columns:
-        # Calculate daily consumption
-        daily_start = data[column].resample('D').first()
-        daily_end = data[column].resample('D').last()
-        daily_diff = daily_end - daily_start
-        daily_consumption[column] = daily_diff
-
-        # Calculate weekly consumption
-        weekly_start = data[column].resample('W').first()
-        weekly_end = data[column].resample('W').last()
-        weekly_diff = weekly_end - weekly_start
-        weekly_consumption[column] = weekly_diff
-
-    daily_consumption = daily_consumption.reset_index()
-    weekly_consumption = weekly_consumption.reset_index()
-    daily_consumption.columns = ['Date'] + [f'Daily_{col}_Consumption' for col in columns]
-    weekly_consumption.columns = ['Week'] + [f'Weekly_{col}_Consumption' for col in columns]
-
-    print("Daily Consumption:")
-    print(daily_consumption)
-
-    print("\nWeekly Consumption:")
-    print(weekly_consumption)
-
-
-# calculate_consumption(all_data, ['EP_TOTAL_kWh','EQ_TOTAL_kvarh'])
-
-
-
-# Plot the data
-def plot_time_series(data, columns, title, ylabel, colors=None):
-    plt.figure(figsize=(14, 8))
-    for col in columns:
-        plt.plot(data.index, data[col], label=col)
-    plt.title(title)
-    plt.xlabel('Time')
-    plt.ylabel(ylabel)
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-
-
-# Plot I1, I2, I3 in one figure
-# plot_time_series(
-#     data=all_data,
-#     columns=['I1', 'I2', 'I3'],
-#     title='Time Series Data for I1, I2, I3',
-#     ylabel='Current'
-# )
-
-# Plot P1, P2, P3, Q1, Q2, Q3 in another figure
-# plot_time_series(
-#     data=all_data,
-#     columns=['P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3'],
-#     title='Time Series Data for P1, P2, P3, Q1, Q2, Q3',
-#     ylabel='Power'
-# )
-
-# plot_time_series(
-#     data=all_data,
-#     columns=['EP_TOTAL_kWh', 'EQ_TOTAL_kvarh'],
-#     title='Time Series Data for EP_Total, EQ_Total',
-#     ylabel='Power'
-# )
+# Get list of charger columns (excluding the percentage difference column)
 chargers = set(cms_df.columns.values)
 chargers.remove('diff_site_power_percentage')
 
-# plot_time_series(
-#     data=cms_df,
-#     columns=chargers,
-#     title='Time Series charger data',
-#     ylabel='kw'
-# )
-
+# Define plotting functions
 def plot2_time_series(data, columns, title, ylabel, columns2, title2, ylabel2, colors=None):
+    """Create a figure with two vertically stacked time series plots."""
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
 
+    # Plot first panel
     for col in columns:
-        ax1.plot(data.index, data[col], label=col, color=colors[col] if colors and col in colors else None)
+        ax1.plot(data.index, data[col], label=col, 
+                color=colors[col] if colors and col in colors else None)
     ax1.set_title(title)
     ax1.set_xlabel('Time')
     ax1.set_ylabel(ylabel)
     ax1.grid(True)
     ax1.legend()
 
+    # Plot second panel
     for col in columns2:
-        ax2.plot(data.index, data[col], label=col, color=colors[col] if colors and col in colors else None)
-
+        ax2.plot(data.index, data[col], label=col,
+                color=colors[col] if colors and col in colors else None)
     ax2.set_title(title2)
     ax2.set_xlabel('Time')
     ax2.set_ylabel(ylabel2)
@@ -154,24 +83,29 @@ def plot2_time_series(data, columns, title, ylabel, columns2, title2, ylabel2, c
     ax2.grid(True)
     plt.tight_layout()
 
-def plot2_time_series_2data(data, columns, title, ylabel,data2, columns2, title2, ylabel2, colors=None):
+def plot2_time_series_2data(data, columns, title, ylabel, data2, columns2, title2, ylabel2, colors=None):
+    """Create a figure with two vertically stacked time series plots from different datasets."""
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
 
+    # Plot first panel with data1 and site_power from data2
     for col in columns:
-        ax1.plot(data.index, data[col], label=col, color=colors[col] if colors and col in colors else None)
-    # Hardcoded cms site data
-    ax1.plot(data.index, data2['site_power'], label='site_power', color=colors['site_power'] if colors and 'site_power' in colors else None)
+        ax1.plot(data.index, data[col], label=col, 
+                color=colors[col] if colors and col in colors else None)
+    # Add site_power from data2
+    ax1.plot(data.index, data2['site_power'], label='site_power', 
+            color=colors['site_power'] if colors and 'site_power' in colors else None)
     ax1.set_title(title)
     ax1.set_xlabel('Time')
     ax1.set_ylabel(ylabel)
     ax1.grid(True)
     ax1.legend()
 
+    # Plot second panel with data2 (excluding site_power)
     for col in columns2:
-        if col == 'site_power': # skip site_power for all the chargers
+        if col == 'site_power':  # Skip site_power as it's in the top panel
             continue
-        ax2.plot(data2.index, data2[col], label=col, color=colors[col] if colors and col in colors else None)
-
+        ax2.plot(data2.index, data2[col], label=col,
+                color=colors[col] if colors and col in colors else None)
     ax2.set_title(title2)
     ax2.set_xlabel('Time')
     ax2.set_ylabel(ylabel2)
@@ -179,7 +113,7 @@ def plot2_time_series_2data(data, columns, title, ylabel,data2, columns2, title2
     ax2.grid(True)
     plt.tight_layout()
 
-
+# Color map for consistent visualization
 color_map = {
     # P and Q by phase
     'P1': 'blue',
@@ -188,7 +122,7 @@ color_map = {
     'Q2': 'lime',
     'P3': 'red', 
     'Q3': 'lightcoral',
-    # current by phase
+    # Current by phase
     'I1': 'blue',
     'I2': 'green',
     'I3': 'red', 
@@ -199,112 +133,50 @@ color_map = {
     'Ang_Ia': 'cyan',
     'Ang_Ib': 'lime',
     'Ang_Ic': 'lightcoral',
-
-    # THD
+    # THD values
     'THD_Ia': 'blue',
     'THD_Ib': 'green',
     'THD_Ic': 'red',
-
     'THD_Va': 'cyan',
     'THD_Vb': 'lime',
     'THD_Vc': 'lightcoral',
+    # CMS comparison values
     'site_power': 'green',
     'Psum_kW': 'blue',
     'diff': 'red'
 }
 
-# plot2_time_series(
-#     data=all_data,
-#     columns=['Ang_Vb', 'Ang_Vc', 'Ang_Ia', 'Ang_Ib', 'Ang_Ic'],
-#     title='Time Series Data for Ang_Vb, Ang_Vc, Ang_Ia, Ang_Ib, Ang_Ic',
-#     ylabel='Degree',
-#     columns2=['P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3'],
-#     title2='Time Series Data for P1, P2, P3, Q1, Q2, Q3',
-#     ylabel2='Power',
-#     colors=color_map
-# )
+# Create visualization plots
+print("Creating plots...")
 
-# plot2_time_series(
-#     data=all_data,
-#     columns=['I1', 'I2', 'I3'],
-#     title='Time Series Data for I1, I2, I3',
-#     ylabel='Current',
-#     columns2=['Ang_Vb', 'Ang_Vc', 'Ang_Ia', 'Ang_Ib', 'Ang_Ic'],
-#     title2='Time Series Data for Ang_Vb, Ang_Vc, Ang_Ia, Ang_Ib, Ang_Ic',
-#     ylabel2='Degree',
-#     colors=color_map
-# )
-
-# plot2_time_series(
-#     data=all_data,
-#     columns=['I1', 'I2', 'I3'],
-#     title='Time Series Data for I1, I2, I3',
-#     ylabel='Current',
-#     columns2=['THD_Ia', 'THD_Ib', 'THD_Ic', 'THD_Va', 'THD_Vb', 'THD_Vc'],
-#     title2='Time Series Data for Ia, Ib, Ic THD',
-#     ylabel2='Percentage',
-#     colors=color_map
-# )
-
-# plot2_time_series(
-#     data=all_data,
-#     columns=['I1', 'I2', 'I3'],
-#     title='Time Series Data for I1, I2, I3',
-#     ylabel='Current',
-#     columns2=['THD_Ia', 'THD_Ib', 'THD_Ic', 'THD_Va', 'THD_Vb', 'THD_Vc'],
-#     title2='Time Series Data for Ia, Ib, Ic THD',
-#     ylabel2='Percentage',
-#     colors=color_map
-# )
-
+# Plot 1: Compare power measurements and charger data
 plot2_time_series_2data(
     data=all_data,
-    columns=['Psum_kW', 'diff'], # skip apparent power for now 'Ssum_kVA'
-    title='Time Series Data for Psum_kW(meter) and site_power(CMS)',
+    columns=['Psum_kW', 'diff'],  # Meter power and difference
+    title='Power Meter vs. CMS Site Power',
     ylabel='kW',
     data2=cms_df,
-    columns2=chargers,
-    title2='Time Series Data for different chargers',
+    columns2=chargers,  # All charger columns
+    title2='Individual Charger Power',
     ylabel2='kW',
     colors=color_map
 )
 
+# Plot 2: Percentage difference between power measurements
 plot2_time_series_2data(
     data=all_data,
-    columns=['Psum_kW', 'diff'], # skip apparent power for now 'Ssum_kVA'
-    title='Time Series Data for Psum_kW(meter) and site_power(CMS)',
+    columns=['Psum_kW', 'diff'],  # Meter power and difference
+    title='Power Meter vs. CMS Site Power',
     ylabel='kW',
     data2=cms_df,
-    columns2=['diff_site_power_percentage'],
-    title2='Time Series Data for different chargers',
-    ylabel2='kW',
+    columns2=['diff_site_power_percentage'],  # Percentage difference
+    title2='Percentage Difference',
+    ylabel2='%',
     colors=color_map
 )
 
-# =======Below code has issues, not of the same dimension
-# def plot_time_series_2data(data, data2, columns, columns2, title, ylabel, colors=None):
-#     plt.figure(figsize=(14, 8))
-#     for col in columns:
-#         plt.plot(data.index, data[col], label=col)
-#     for col in columns2:
-#         plt.plot(data.index, data2[col], label=col)
-#     plt.title(title)
-#     plt.xlabel('Time')
-#     plt.ylabel(ylabel)
-#     plt.legend()
-#     plt.grid(True)
-#     plt.tight_layout()
-
-# plot_time_series_2data(
-#     data=all_data,
-#     columns=['Psum_kW'],
-#     data2=cms_df,
-#     columns2=chargers,
-#     title='Time Series charger data',
-#     ylabel='kw'
-# )
-
-
+# Display plots
+print("Displaying plots. Press Enter to close...")
 plt.show(block=False)
-input("Press Enter to close the figure...")
+input("Press Enter to close the figures...")
 plt.close('all')
