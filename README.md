@@ -1,6 +1,6 @@
-# Power Quality Data Analysis Tools
+# Meter Data Analysis Tools
 
-This repository contains a collection of Python scripts for analyzing power quality data from various sources.
+This repository contains a collection of Python scripts for analyzing meter data.
 
 ## Installation
 
@@ -41,7 +41,7 @@ This script:
 
 #### 2. CMS Data Comparison
 
-Use `cms_data.py` to compare power quality measurements with CMS (Charger Management System) data:
+Use `cms_data.py` to compare meter measurements with CMS (Charger Management System) data:
 
 ```bash
 python cms_data.py /path/to/data/directory

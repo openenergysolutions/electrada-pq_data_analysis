@@ -10,8 +10,8 @@ if len(sys.argv) != 2:
 
 data_dir = sys.argv[1]
 
-# Load power quality data from files
-print(f"Loading power quality data from {data_dir}...")
+# Load meter data from files
+print(f"Loading meter data from {data_dir}...")
 data_frames = []
 time_column = 'Time'
 
