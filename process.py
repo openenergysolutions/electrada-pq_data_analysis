@@ -15,6 +15,15 @@ print(f"Loading data from {data_dir}...")
 data_frames = []
 time_column = 'Time'
 
+data_for_plot = {
+    'column1': ['I1', 'I2', 'I3'],
+    'title1': 'Current Magnitude Per Phase',
+    'ylabel1': 'Amps',
+    'column2': ['Ang_Ia', 'Ang_Ib', 'Ang_Ic'],
+    'title2': 'Current Phase Angle Per Phase',
+    'ylabel2': 'Degrees',
+}
+
 for filename in os.listdir(data_dir):
     if filename.endswith(".csv"):
         file_path = os.path.join(data_dir, filename)
@@ -101,9 +110,7 @@ if energy_columns:
 
         # Plot second panel
         for col in columns2:
-            x = data2['Date'] if 'Date' in data2.columns else data2['Week']
-            y = data2[col]
-            ax2.plot(x, y, label=col, 
+            ax2.plot(data2.index, data2[col], label=col, 
                     color=colors[col] if colors and col in colors else None)
         ax2.set_title(title2)
         ax2.set_xlabel('Time')
@@ -116,40 +123,18 @@ if energy_columns:
     # Create plots
     print("Creating plots...")
     
-    # Plot 1: Energy totals and daily consumption
+    # Plot time series of interest
     plot_dual_time_series(
         data1=all_data,
-        columns1=energy_columns,
-        title1='Total Energy Measurements',
-        ylabel1='Energy',
-        data2=daily_data,
-        columns2=[col for col in daily_data.columns if col != 'Date'],
-        title2='Daily Energy Consumption',
-        ylabel2='Energy Consumption',
+        columns1=data_for_plot['column1'],
+        title1=data_for_plot['title1'],
+        ylabel1=data_for_plot['ylabel1'],
+        data2=all_data,
+        columns2=data_for_plot['column2'],
+        title2=data_for_plot['title2'],
+        ylabel2=data_for_plot['ylabel2'],
         colors=color_map
     )
-
-    # Plot 2: Daily and weekly consumption
-    plt.figure(figsize=(14, 8))
-    
-    # Plot daily consumption
-    daily_cols = [col for col in daily_data.columns if col != 'Date']
-    for col in daily_cols:
-        plt.plot(daily_data['Date'], daily_data[col], label=col,
-                color=color_map[col] if col in color_map else None)
-    
-    # Plot weekly consumption on same graph
-    weekly_cols = [col for col in weekly_data.columns if col != 'Week']
-    for col in weekly_cols:
-        plt.plot(weekly_data['Week'], weekly_data[col], label=col, 
-                linestyle='--', marker='o',
-                color=color_map[col.replace('Daily', 'Weekly')] if col.replace('Daily', 'Weekly') in color_map else None)
-    
-    plt.title('Energy Consumption Comparison')
-    plt.xlabel('Time')
-    plt.ylabel('Energy')
-    plt.grid(True)
-    plt.legend()
 else:
     print("No energy data (EP_TOTAL or EQ_TOTAL) found in the dataset.")
 
