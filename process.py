@@ -19,9 +19,18 @@ data_for_plot = {
     'column1': ['I1', 'I2', 'I3'],
     'title1': 'Current Magnitude Per Phase',
     'ylabel1': 'Amps',
-    'column2': ['Ang_Ia', 'Ang_Ib', 'Ang_Ic'],
+    'column2': ['Ang_Ia', 'Ang_Ib', 'Ang_Ic','Ang_Vb', 'Ang_Vc'],
     'title2': 'Current Phase Angle Per Phase',
     'ylabel2': 'Degrees',
+}
+
+data_for_plot2 = {
+    'column1': ['P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3'],
+    'title1': 'P, Q Per Phase',
+    'ylabel1': 'Kw',
+    'column2': ['PF'],
+    'title2': 'Power Factor',
+    'ylabel2': 'p.u.',
 }
 
 for filename in os.listdir(data_dir):
@@ -135,6 +144,18 @@ if energy_columns:
         ylabel2=data_for_plot['ylabel2'],
         colors=color_map
     )
+    plot_dual_time_series(
+        data1=all_data,
+        columns1=data_for_plot2['column1'],
+        title1=data_for_plot2['title1'],
+        ylabel1=data_for_plot2['ylabel1'],
+        data2=all_data,
+        columns2=data_for_plot2['column2'],
+        title2=data_for_plot2['title2'],
+        ylabel2=data_for_plot2['ylabel2'],
+        colors=color_map
+    )
+
 else:
     print("No energy data (EP_TOTAL or EQ_TOTAL) found in the dataset.")
 
