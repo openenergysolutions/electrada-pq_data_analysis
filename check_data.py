@@ -57,7 +57,7 @@ def plot2_time_series(data, columns, title, ylabel, columns2, title2, ylabel2, c
         ax1.plot(data.index, data[col], label=col, 
                 color=colors[col] if colors and col in colors else None)
     ax1.set_title(title)
-    ax1.set_xlabel('Time')
+    ax1.set_xlabel(time_column)
     ax1.set_ylabel(ylabel)
     ax1.grid(True)
     ax1.legend()
@@ -67,11 +67,89 @@ def plot2_time_series(data, columns, title, ylabel, columns2, title2, ylabel2, c
         ax2.plot(data.index, data[col], label=col,
                 color=colors[col] if colors and col in colors else None)
     ax2.set_title(title2)
-    ax2.set_xlabel('Time')
+    ax2.set_xlabel(time_column)
     ax2.set_ylabel(ylabel2)
     ax2.legend()
     ax2.grid(True)
     plt.tight_layout()
+
+def plot6_time_series(data, 
+                     columns1, title1, ylabel1,
+                     columns2, title2, ylabel2,
+                     columns3, title3, ylabel3,
+                     columns4, title4, ylabel4,
+                     columns5, title5, ylabel5,
+                     columns6, title6, ylabel6,
+                     colors=None):
+    """
+    Plot six time series on six separate subplots sharing the same x-axis.
+    
+    Parameters:
+    - data: DataFrame with time index
+    - columnsN: List of column names to plot in subplot N
+    - titleN: Title for subplot N
+    - ylabelN: Y-axis label for subplot N
+    - colors: Optional dictionary mapping column names to colors
+    """
+    fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(6, 1, figsize=(14, 16), sharex=True)
+    
+    # Plot first panel
+    for col in columns1:
+        ax1.plot(data.index, data[col], label=col, 
+                color=colors[col] if colors and col in colors else None)
+    ax1.set_title(title1)
+    ax1.set_ylabel(ylabel1)
+    ax1.grid(True)
+    ax1.legend()
+    
+    # Plot second panel
+    for col in columns2:
+        ax2.plot(data.index, data[col], label=col,
+                color=colors[col] if colors and col in colors else None)
+    ax2.set_title(title2)
+    ax2.set_ylabel(ylabel2)
+    ax2.grid(True)
+    ax2.legend()
+    
+    # Plot third panel
+    for col in columns3:
+        ax3.plot(data.index, data[col], label=col,
+                color=colors[col] if colors and col in colors else None)
+    ax3.set_title(title3)
+    ax3.set_ylabel(ylabel3)
+    ax3.grid(True)
+    ax3.legend()
+    
+    # Plot fourth panel
+    for col in columns4:
+        ax4.plot(data.index, data[col], label=col,
+                color=colors[col] if colors and col in colors else None)
+    ax4.set_title(title4)
+    ax4.set_ylabel(ylabel4)
+    ax4.grid(True)
+    ax4.legend()
+    
+    # Plot fifth panel
+    for col in columns5:
+        ax5.plot(data.index, data[col], label=col,
+                color=colors[col] if colors and col in colors else None)
+    ax5.set_title(title5)
+    ax5.set_ylabel(ylabel5)
+    ax5.grid(True)
+    ax5.legend()
+    
+    # Plot sixth panel
+    for col in columns6:
+        ax6.plot(data.index, data[col], label=col,
+                color=colors[col] if colors and col in colors else None)
+    ax6.set_title(title6)
+    ax6.set_xlabel(time_column)
+    ax6.set_ylabel(ylabel6)
+    ax6.grid(True)
+    ax6.legend()
+    
+    plt.tight_layout()
+    return fig
 
 # Color map for consistent visualization
 color_map = {
@@ -109,27 +187,61 @@ color_map = {
 # Create visualization plots
 print("Creating plots...")
 
-# Plot 1: Power difference and phase power values
-plot2_time_series(
-    data=all_data,
-    columns=['diff_pqs'],
-    title='Difference between S1 and √(P1² + Q1²)',
-    ylabel='kVA',
-    columns2=['P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3'],
-    title2='Phase Power Values (P1, P2, P3, Q1, Q2, Q3)',
-    ylabel2='Power',
-    colors=color_map
-)
+# # Plot 1: Power difference and phase power values
+# plot2_time_series(
+#     data=all_data,
+#     columns=['diff_pqs'],
+#     title='Difference between S1 and √(P1² + Q1²)',
+#     ylabel='kVA',
+#     columns2=['P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3'],
+#     title2='Phase Power Values (P1, P2, P3, Q1, Q2, Q3)',
+#     ylabel2='Power',
+#     colors=color_map
+# )
 
 # Plot 2: Compare S measurements and THD values
-plot2_time_series(
+# plot2_time_series(
+#     data=all_data,
+#     columns=['V1', 'V2', 'V3'],
+#     title='Voltages in each phase',
+#     ylabel='V',
+#     columns2=['THD_Vavg', 'THD_Iavg'],
+#     title2='THD Values',
+#     ylabel2='Percentage',
+#     colors=color_map
+# )
+
+# plot2_time_series(
+#     data=all_data,
+#     columns=['V1', 'V2', 'V3'],
+#     title='Voltages in each phase',
+#     ylabel='V',
+#     columns2=['I1', 'I2', 'I3'],
+#     title2='Currents in each phase',
+#     ylabel2='A',
+#     colors=color_map
+# )
+
+plot6_time_series(
     data=all_data,
-    columns=['Ssum_kVA', 'Ssum_cal'],
-    title='Measured vs. Calculated S',
-    ylabel='kVA',
-    columns2=['THD_Vavg', 'THD_Iavg'],
-    title2='THD Values',
-    ylabel2='Percentage',
+    columns1=['P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3'],
+    title1='Phase Power Values',
+    ylabel1='KVA',
+    columns2=['I1', 'I2', 'I3'],
+    title2='Currents by phase',
+    ylabel2='A',
+    columns3=['THD_Ia', 'THD_Ib', 'THD_Ic'],
+    title3='Current THD by phase',
+    ylabel3='Percentage',
+    columns4=['V1', 'V2', 'V3'],
+    title4='Voltages by phase',
+    ylabel4='V',
+    columns5=['THD_Va', 'THD_Vb', 'THD_Vc'],
+    title5='Voltage THD by phase',
+    ylabel5='Percentage',
+    columns6=['PF1', 'PF2', 'PF3'],
+    title6='Power Factor by phase',
+    ylabel6='Percentage',
     colors=color_map
 )
 
